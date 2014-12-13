@@ -106,3 +106,4 @@ def application(environ, start_response):
     data = "\n".join(data)
     return [data]
 
+app = application
