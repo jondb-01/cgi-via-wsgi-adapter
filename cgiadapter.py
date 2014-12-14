@@ -1,6 +1,8 @@
 """
 UWSGI_ADAPTER_BASEDIR=$(pwd)/apps uwsgi --http=:8080  --wsgi=adapter --touch-reload=apps/test.cgi --touch-reload=adapter.py  --uid=www-data --gid=www-data
 """
+
+import mimetypes
 import os
 import sys
 import subprocess
@@ -69,18 +71,27 @@ def application(environ, start_response):
         return "File not found.\n%s" % _script_path
 
     script_filename, script_ext = os.path.splitext(script_name)
-    if script_ext not in ('.cgi', '.py'):
+    mtype, _ = mimetypes.guess_type(script_name)
+    if mtype and script_ext in ('.gif', '.png', '.jpg', '.jpeg', '.css', '.js', '.html'):
+        start_response('200', [('content-type', mtype)])
+        with open(script_name, 'r') as fo:
+            return fo.read()
+    elif script_ext not in ('.cgi', '.py', '.pl'):
         code(403, start_response)
         return "Execution not allowed."
-    
+
     assert script_name[:len(BASEDIR)] == BASEDIR, script_name + ' ' + BASEDIR
-    
+
     # Launch
     os.chdir(os.path.dirname(script_name))
-    ps = subprocess.Popen([script_name], 
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
+    try:
+        ps = subprocess.Popen([script_name],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+    except OSError as e:
+        sys.stderr.write("Error opening script %s. %s" % (script_name, e))
+        raise
     (resp, stderrdata) = ps.communicate(input=in_buff)
     ret_code = ps.wait()
 
