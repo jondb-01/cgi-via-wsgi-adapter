@@ -1,5 +1,5 @@
 cgi-via-wsgi-adapter
-====================
+=====================
 
 Wraps a CGI script in a WSGI container to run with uWSGI.
 
